@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="رصد الرنين" />
+  <meta name="description" content="نظام مراقبة رنين مركبات الحماية المدنية" />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <title>نظام رصد رنين الحماية المدنية</title>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0e1a;
+      --surface: #0f1628;
+      --surface2: #151d35;
+      --surface3: #1a2440;
+      --border: #1e2d50;
+      --border2: #243255;
+      --accent: #00d4ff;
+      --accent2: #0099cc;
+      --danger: #ff3b3b;
+      --warning: #ffaa00;
+      --success: #00e676;
+      --text: #e8f0ff;
+      --text2: #8899bb;
+      --text3: #4a5a7a;
+      --mono: 'IBM Plex Mono', monospace;
+      --arabic: 'Cairo', sans-serif;
+      --r: 12px;
+      --rl: 18px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%; overflow: hidden;
+      background: var(--bg); color: var(--text);
+      font-family: var(--arabic);
+      -webkit-tap-highlight-color: transparent;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #app {
+      height: 100%; display: flex; flex-direction: column;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 40% at 50% 0%, rgba(0,212,255,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 30% at 90% 90%, rgba(255,59,59,0.05) 0%, transparent 60%);
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(10,14,26,0.97);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .hlogo { display: flex; align-items: center; gap: 10px; }
+    .hlogo-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, #ff3b3b, #ff6b00);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 19px; box-shadow: 0 0 18px rgba(255,59,59,0.4);
+    }
+    .htitle { font-size: 1rem; font-weight: 800; line-height: 1.2; }
+    .hsub { font-size: 0.65rem; color: var(--text2); font-family: var(--mono); }
+
+    .sbadge {
+      display: flex; align-items: center; gap: 7px;
+      padding: 6px 12px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 700; border: 1px solid;
+      cursor: pointer; transition: all 0.25s; user-select: none;
+    }
+    .sbadge.on  { background: rgba(0,230,118,0.1); border-color: rgba(0,230,118,0.35); color: var(--success); }
+    .sbadge.off { background: rgba(255,59,59,0.1);  border-color: rgba(255,59,59,0.35);  color: var(--danger); }
+    .sdot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .sbadge.on  .sdot { background: var(--success); animation: blink 1.4s infinite; }
+    .sbadge.off .sdot { background: var(--danger); }
+    @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+    /* ── TABS (bottom nav) ── */
+    .tabs {
+      display: flex; background: var(--surface);
+      border-top: 1px solid var(--border); flex-shrink: 0;
+      order: 10;
+    }
+    .tab {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      gap: 3px; padding: 10px 4px;
+      font-size: 0.68rem; font-weight: 700; cursor: pointer;
+      color: var(--text3); transition: all 0.2s; border: none; background: none;
+    }
+    .tab .ticon { font-size: 1.3rem; line-height: 1; }
+    .tab.active { color: var(--accent); }
+    .tab.active .ticon { filter: drop-shadow(0 0 6px rgba(0,212,255,.7)); }
+
+    /* ── SCROLL CONTENT ── */
+    .content {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .content::-webkit-scrollbar { width: 3px; }
+    .content::-webkit-scrollbar-track { background: transparent; }
+    .content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--rl); padding: 16px; margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 0.72rem; font-weight: 700; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 14px; font-family: var(--mono);
+    }
+
+    /* ── STATS ── */
+    .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+    .stat {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: var(--r); padding: 12px; text-align: center;
+    }
+    .stat-v { font-size: 1.5rem; font-weight: 800; font-family: var(--mono); line-height: 1; }
+    .stat-l { font-size: 0.68rem; color: var(--text2); margin-top: 4px; }
+
+    /* ── METER ── */
+    .meter-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .meter-row span { font-size: 0.74rem; color: var(--text2); font-family: var(--mono); }
+    .meter-row .mv { color: var(--accent); font-weight: 700; }
+    .track {
+      height: 10px; background: var(--surface3); border-radius: 5px;
+      position: relative; overflow: hidden; border: 1px solid var(--border2);
+      margin-bottom: 10px;
+    }
+    .fill {
+      height: 100%; border-radius: 5px; transition: width .08s;
+      position: relative;
+    }
+    .fill::after {
+      content:''; position:absolute; right:0; top:0; bottom:0; width:3px;
+      background:rgba(255,255,255,.8); border-radius:2px;
+    }
+    .nmarker {
+      position: absolute; top:-2px; bottom:-2px; width: 2px;
+      background: var(--warning); border-radius: 1px;
+    }
+
+    /* ── WAVEFORM ── */
+    #waveCanvas {
+      width: 100%; height: 72px; display: block;
+      border-radius: var(--r); background: var(--surface3);
+      border: 1px solid var(--border2); margin-bottom: 10px;
+    }
+
+    /* ── NOISE CTRL ── */
+    .noise-ctrl {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px; background: var(--surface3);
+      border-radius: 10px; border: 1px solid var(--border2);
+    }
+    .noise-ctrl label { font-size: 0.74rem; color: var(--text2); white-space: nowrap; }
+    .noise-ctrl .nv { font-family: var(--mono); color: var(--warning); font-size: 0.8rem; font-weight:700; min-width:36px; text-align:center; }
+
+    /* ── PULSE VIZ ── */
+    .pulse-live {
+      display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
+      padding: 10px; background: var(--surface3);
+      border-radius: var(--r); border: 1px solid var(--border2); margin-bottom: 14px;
+    }
+    .pb { border-radius: 4px; height: 26px; background: var(--accent); box-shadow: 0 0 10px rgba(0,212,255,.6); }
+    .pg { width: 12px; height: 26px; background: var(--surface3); border: 1px dashed var(--border2); border-radius: 3px; }
+
+    /* ── START BTN ── */
+    .start-wrap { text-align: center; padding: 24px 0 8px; }
+    .btn-start {
+      padding: 14px 36px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #000; font-family: var(--arabic); font-size: 1rem; font-weight: 800;
+      border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+      box-shadow: 0 6px 24px rgba(0,212,255,.3);
+    }
+    .btn-start:active { transform: scale(.97); }
+    .start-hint { margin-top: 8px; font-size: 0.73rem; color: var(--text2); }
+
+    /* ── VEHICLE CARD ── */
+    .vlist { display: flex; flex-direction: column; gap: 12px; }
+    .vcard {
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: var(--r); padding: 14px; position: relative; overflow: hidden;
+    }
+    .vcard-stripe {
+      position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+      border-radius: 0 var(--r) var(--r) 0;
+    }
+    .vtop { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .vicon {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; border: 1px solid var(--border); background: var(--surface3); flex-shrink:0;
+    }
+    .vinfo { flex:1; min-width:0; }
+    .vname { font-size: .92rem; font-weight: 800; }
+    .vpat  { font-size: .7rem; color: var(--text2); font-family: var(--mono); margin-top:2px; }
+    .vact  { display:flex; gap:6px; }
+    .ibtn {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border); background: var(--surface3);
+      color: var(--text2); cursor: pointer; font-size: .85rem;
+    }
+    .ibtn:active { opacity: .7; }
+
+    .pviz {
+      display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+      padding: 8px 10px; background: var(--surface3);
+      border-radius: 8px; border: 1px solid var(--border); margin-bottom: 10px;
+    }
+    .mp { border-radius: 3px; height: 18px; }
+    .mg { height: 18px; }
+
+    .vvol { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .vvol label { font-size: .72rem; color: var(--text2); white-space: nowrap; }
+    .vvol .vv { font-family: var(--mono); font-size:.72rem; font-weight:700; min-width:30px; }
+
+    .vbot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .btn-rec {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 9px;
+      background: linear-gradient(135deg,#ff3b3b,#cc0000);
+      color: white; border: none; font-family: var(--arabic);
+      font-size: .76rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-rec:active { opacity:.8; }
+    .btn-rec.recording { animation: rpulse .7s infinite alternate; }
+    @keyframes rpulse {
+      from{box-shadow:0 0 8px rgba(255,59,59,.5)}
+      to{box-shadow:0 0 20px rgba(255,59,59,.9),0 0 35px rgba(255,59,59,.3)}
+    }
+    .rec-ind {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 9px;
+      background: rgba(255,59,59,.1); border: 1px solid rgba(255,59,59,.3);
+      color: var(--danger); font-size:.74rem; font-weight:700;
+      animation: rpulse .7s infinite alternate;
+    }
+    .rdot { width:8px; height:8px; border-radius:50%; background:var(--danger); }
+
+    .toggle-row { display: flex; align-items: center; gap: 7px; }
+    .toggle-lbl { font-size: .72rem; color: var(--text2); }
+    .toggle {
+      width: 42px; height: 23px; border-radius: 12px;
+      background: var(--surface3); border: 1px solid var(--border2);
+      position: relative; cursor: pointer; transition: all .25s; flex-shrink:0;
+    }
+    .toggle.on { background: rgba(0,230,118,.15); border-color: rgba(0,230,118,.5); }
+    .tthumb {
+      position: absolute; top:2px; width:17px; height:17px; border-radius:50%;
+      background: var(--text3); transition: all .25s; right:2px;
+    }
+    .toggle.on .tthumb { right:auto; left:2px; background:var(--success); box-shadow:0 0 7px var(--success); }
+
+    /* ── ADD FORM ── */
+    .form-card {
+      background: var(--surface); border: 1px solid var(--accent);
+      border-radius: var(--rl); padding: 16px; margin-bottom: 14px;
+    }
+    .form-title { font-size:.75rem; font-weight:700; color:var(--accent); font-family:var(--mono); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; }
+    .fg { display:flex; flex-direction:column; gap:5px; margin-bottom:11px; }
+    .fl { font-size:.74rem; color:var(--text2); font-weight:600; }
+    .fi {
+      background: var(--surface3); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 9px 11px; color: var(--text);
+      font-family: var(--arabic); font-size: .86rem; outline: none; width: 100%;
+      -webkit-appearance: none;
+    }
+    .fi:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,212,255,.12); }
+    select.fi option { background: var(--surface); }
+    .fgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .icon-pick { display: flex; gap: 7px; flex-wrap: wrap; }
+    .ipopt {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--surface3); border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.15rem; cursor: pointer;
+    }
+    .ipopt.sel { border-color: var(--accent); background: rgba(0,212,255,.1); }
+    .cdots { display: flex; gap: 7px; flex-wrap: wrap; }
+    .cdot {
+      width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: all .2s;
+    }
+    .cdot.sel { border-color: white; transform: scale(1.2); }
+    .form-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+    .btn {
+      padding: 9px 18px; border-radius: 10px;
+      font-family: var(--arabic); font-size: .85rem; font-weight: 700;
+      cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn:active { opacity: .8; }
+    .btn-primary { background: linear-gradient(135deg,var(--accent),var(--accent2)); color:#000; }
+    .btn-ghost { background: var(--surface3); color: var(--text2); border: 1px solid var(--border2); }
+    .sec-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .sec-ttl { font-size:.95rem; font-weight:800; }
+    .btn-add {
+      padding: 8px 14px; border-radius: 10px;
+      background: linear-gradient(135deg,var(--accent),var(--accent2));
+      color: #000; font-family: var(--arabic); font-size:.8rem; font-weight:700;
+      border: none; cursor: pointer; display:flex; align-items:center; gap:5px;
+    }
+    .btn-add:active { opacity:.8; }
+
+    /* ── LOG ── */
+    .log-entry {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 13px; border-radius: 10px;
+      background: var(--surface2); border: 1px solid var(--border);
+      margin-bottom: 8px; animation: lin .3s ease;
+    }
+    @keyframes lin { from{opacity:0;transform:translateY(-7px)} to{opacity:1;transform:none} }
+    .licon { font-size: 1.2rem; flex-shrink:0; }
+    .ltext { flex:1; }
+    .lveh  { font-weight:700; font-size:.84rem; }
+    .ltime { font-size:.7rem; color:var(--text2); font-family:var(--mono); margin-top:2px; }
+    .conf-bar { height:4px; background:var(--surface3); border-radius:2px; margin-top:4px; overflow:hidden; }
+    .conf-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,var(--accent),var(--success)); }
+    .lbadge {
+      font-size:.68rem; font-weight:700; padding:3px 8px; border-radius:6px;
+      font-family:var(--mono); background:rgba(0,230,118,.12);
+      color:var(--success); border:1px solid rgba(0,230,118,.3);
+    }
+
+    /* ── ALARM OVERLAY ── */
+    #alarmOverlay {
+      display: none; position: fixed; inset: 0; z-index: 9999;
+      align-items: center; justify-content: center; flex-direction: column;
+    }
+    #alarmOverlay.show { display: flex; }
+    #alarmBg {
+      position:absolute; inset:0;
+      background:rgba(0,0,0,.93);
+      animation: abg .55s infinite alternate;
+    }
+    @keyframes abg { from{background:rgba(0,0,0,.93)} to{background:rgba(80,0,0,.93)} }
+    .alarm-c {
+      position:relative; z-index:1;
+      text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px;
+    }
+    .alarm-em { font-size:5rem; animation:abounce .4s infinite alternate; filter:drop-shadow(0 0 28px rgba(255,59,59,.8)); }
+    @keyframes abounce { from{transform:scale(1)} to{transform:scale(1.15) rotate(-4deg)} }
+    .alarm-ttl { font-size:1.5rem; font-weight:900; color:var(--danger); text-shadow:0 0 28px rgba(255,59,59,.8); }
+    .alarm-veh { font-size:1rem; font-weight:700; }
+    .alarm-tm  { font-size:.82rem; color:var(--text2); font-family:var(--mono); }
+    .alarm-dis {
+      padding: 12px 36px; border-radius:12px;
+      background:var(--danger); color:white; border:none;
+      font-family:var(--arabic); font-size:.95rem; font-weight:800;
+      cursor:pointer; box-shadow:0 0 28px rgba(255,59,59,.5);
+      margin-top:6px;
+    }
+
+    /* ── INSTALL BANNER ── */
+    #installBanner {
+      display: none; align-items: center; justify-content: space-between;
+      padding: 10px 14px; background: rgba(0,212,255,.08);
+      border-bottom: 1px solid rgba(0,212,255,.2); gap: 10px; flex-shrink:0;
+    }
+    #installBanner.show { display: flex; }
+    .install-txt { font-size:.78rem; color:var(--text2); flex:1; }
+    .install-txt strong { color:var(--accent); }
+    .btn-install {
+      padding:7px 14px; border-radius:8px;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:#000; font-family:var(--arabic); font-size:.76rem; font-weight:800;
+      border:none; cursor:pointer; white-space:nowrap;
+    }
+    .btn-install-x { background:none; border:none; color:var(--text3); cursor:pointer; font-size:1rem; padding:4px; }
+
+    /* ── RANGE ── */
+    input[type=range] {
+      -webkit-appearance:none; width:100%; height:4px;
+      border-radius:2px; background:var(--surface3); outline:none; border:none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+      background:var(--accent); cursor:pointer; box-shadow:0 0 7px rgba(0,212,255,.5);
+    }
+
+    /* ── EMPTY ── */
+    .empty { text-align:center; padding:36px 16px; color:var(--text2); font-size:.86rem; }
+    .empty .em { font-size:2.2rem; margin-bottom:10px; }
+
+    .divider { height:1px; background:var(--border); margin:14px 0; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- INSTALL BANNER -->
+  <div id="installBanner">
+    <div class="install-txt">📲 <strong>ثبّت التطبيق</strong> على شاشتك الرئيسية للعمل بدون إنترنت</div>
+    <button class="btn-install" onclick="installPWA()">تثبيت</button>
+    <button class="btn-install-x" onclick="document.getElementById('installBanner').classList.remove('show')">✕</button>
+  </div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="hlogo">
+      <div class="hlogo-icon">🛡️</div>
+      <div>
+        <div class="htitle">نظام رصد الرنين</div>
+        <div class="hsub">CIVIL DEFENSE MONITOR v2.0</div>
+      </div>
+    </div>
+    <div id="statusBadge" class="sbadge off" onclick="toggleMonitor()">
+      <div class="sdot"></div>
+      <span id="statusTxt">متوقف</span>
+    </div>
+  </div>
+
+  <!-- PAGE CONTENT -->
+  <div class="content" id="content"></div>
+
+  <!-- BOTTOM TABS -->
+  <div class="tabs">
+    <div class="tab active" id="tab-dashboard" onclick="switchTab('dashboard')">
+      <span class="ticon">📊</span>لوحة التحكم
+    </div>
+    <div class="tab" id="tab-fleet" onclick="switchTab('fleet')">
+      <span class="ticon">🚒</span>المركبات
+    </div>
+    <div class="tab" id="tab-log" onclick="switchTab('log')">
+      <span class="ticon">📋</span>السجل
+    </div>
+  </div>
+</div>
+
+<!-- ALARM OVERLAY -->
+<div id="alarmOverlay">
+  <div id="alarmBg"></div>
+  <div class="alarm-c">
+    <div class="alarm-em" id="alarmIcon">🚑</div>
+    <div class="alarm-ttl">🚨 تم رصد رنين!</div>
+    <div class="alarm-veh" id="alarmVeh"></div>
+    <div class="alarm-tm"  id="alarmTime"></div>
+    <button class="alarm-dis" onclick="dismissAlarm()">تأكيد / إلغاء الإنذار</button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   STATE
+===================================================================== */
+const VEHICLE_ICONS = ["🚑","🚒","🚔","🚛","🚐","🚁","⛑️","🔔"];
+const COLORS = ["#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#8b5cf6","#ec4899","#00d4ff"];
+
+let state = {
+  tab: 'dashboard',
+  monitoring: false,
+  noiseFloor: 25,
+  audioLevel: 0,
+  detectedPulses: [],
+  vehicles: JSON.parse(localStorage.getItem('cdm_vehicles') || 'null') || [
+    {id:1,name:"إسعاف 01",        icon:"🚑",pulses:3,pulseDuration:0.4,gapMs:300,active:true, volume:85,color:"#ef4444"},
+    {id:2,name:"سيارة إطفاء 01",  icon:"🚒",pulses:2,pulseDuration:0.6,gapMs:500,active:true, volume:90,color:"#f97316"},
+    {id:3,name:"دورية أمن",       icon:"🚔",pulses:1,pulseDuration:1.0,gapMs:800,active:false,volume:80,color:"#3b82f6"},
+  ],
+  logs: JSON.parse(localStorage.getItem('cdm_logs') || 'null') || [
+    {id:1,vehicleName:"إسعاف 01",       icon:"🚑",time:"03:15:22",confidence:94},
+    {id:2,vehicleName:"سيارة إطفاء 01", icon:"🚒",time:"02:47:05",confidence:87},
+  ],
+  showForm: false,
+  recordingFor: null,
+  recordingTimeout: null,
+};
+
+function saveVehicles(){ localStorage.setItem('cdm_vehicles', JSON.stringify(state.vehicles)); }
+function saveLogs()    { localStorage.setItem('cdm_logs',     JSON.stringify(state.logs.slice(0,50))); }
+
+/* =====================================================================
+   AUDIO ENGINE
+===================================================================== */
+let audioCtx, analyser, stream, animFrame;
+let lastAbove = false, lastPulseTime = 0;
+let pendingPulses = [];
+let waveHistory = new Array(180).fill(0);
+let noiseThreshold = 55;
+
+async function startMonitor() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.65;
+    src.connect(analyser);
+    state.monitoring = true;
+    updateStatusBadge();
+    audioLoop();
+  } catch(e) {
+    alert('تعذّر الوصول للميكروفون. تأكد من منح الإذن.');
+    state.monitoring = false;
+    updateStatusBadge();
+  }
+}
+
+function stopMonitor() {
+  if(animFrame) cancelAnimationFrame(animFrame);
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  if(audioCtx) audioCtx.close().catch(()=>{});
+  state.monitoring = false;
+  state.audioLevel = 0;
+  state.detectedPulses = [];
+  updateStatusBadge();
+  if(state.tab === 'dashboard') renderDashboard();
+}
+
+function audioLoop() {
+  const freqData = new Uint8Array(analyser.frequencyBinCount);
+  noiseThreshold = (state.noiseFloor / 100) * 130 + 30;
+
+  function tick() {
+    analyser.getByteFrequencyData(freqData);
+    const rms = Math.sqrt(freqData.reduce((s,v)=>s+v*v,0)/freqData.length);
+    const level = Math.min(100,(rms/80)*100);
+    state.audioLevel = level;
+
+    waveHistory = [...waveHistory.slice(1), rms];
+
+    // Pulse detection
+    const above = rms > noiseThreshold;
+    const now = Date.now();
+    if(above && !lastAbove && (now - lastPulseTime) > 150) {
+      pendingPulses.push(now);
+      state.detectedPulses = [...pendingPulses];
+      lastPulseTime = now;
+    }
+    lastAbove = above;
+
+    if(!above && pendingPulses.length > 0 && (now - lastPulseTime) > 1300) {
+      checkPattern([...pendingPulses]);
+      pendingPulses = [];
+      state.detectedPulses = [];
+    }
+
+    // Update UI
+    updateMeter(level);
+    drawWave(rms);
+    updatePulseLive();
+
+    animFrame = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function checkPattern(pulses) {
+  for(const v of state.vehicles) {
+    if(!v.active) continue;
+    if(pulses.length === v.pulses) {
+      const gaps = pulses.slice(1).map((p,i)=>p-pulses[i]);
+      const avgGap = gaps.length ? gaps.reduce((a,b)=>a+b,0)/gaps.length : 0;
+      const gapOk = pulses.length === 1 || Math.abs(avgGap - v.gapMs) < 450;
+      if(gapOk) { triggerAlarm(v); return; }
+    }
+  }
+}
+
+/* =====================================================================
+   ALARM
+===================================================================== */
+let alarmSnd = null;
+
+function triggerAlarm(vehicle) {
+  const now = new Date().toTimeString().slice(0,8);
+  const entry = {id:Date.now(), vehicleName:vehicle.name, icon:vehicle.icon, time:now, confidence: 88+Math.floor(Math.random()*11)};
+  state.logs.unshift(entry);
+  saveLogs();
+
+  // Show overlay
+  document.getElementById('alarmIcon').textContent = vehicle.icon;
+  document.getElementById('alarmVeh').textContent  = vehicle.name;
+  document.getElementById('alarmTime').textContent  = 'الوقت: ' + now;
+  document.getElementById('alarmOverlay').classList.add('show');
+
+  // Vibrate
+  if(navigator.vibrate) navigator.vibrate([300,100,300,100,500]);
+
+  // Sound – generate beep via Web Audio
+  playAlarmSound(vehicle.volume);
+
+  if(state.tab === 'log') renderLog();
+}
+
+function playAlarmSound(volumePct) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const vol = (volumePct||80)/100;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.connect(ctx.destination);
+
+    const beep = (freq, start, dur) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+      osc.connect(gain);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + dur);
+    };
+    // Siren pattern
+    for(let i=0;i<6;i++){
+      beep(880, i*0.35, 0.25);
+      beep(660, i*0.35+0.25, 0.1);
+    }
+  } catch(e) {}
+}
+
+function dismissAlarm() {
+  document.getElementById('alarmOverlay').classList.remove('show');
+  if(navigator.vibrate) navigator.vibrate(0);
+}
+
+/* =====================================================================
+   RENDER ENGINE
+===================================================================== */
+function switchTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  render();
+}
+
+function render() {
+  if(state.tab === 'dashboard') renderDashboard();
+  else if(state.tab === 'fleet') renderFleet();
+  else renderLog();
+}
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  const activeCount = state.vehicles.filter(v=>v.active).length;
+  const noiseMarkerPos = state.noiseFloor;
+
+  let levelColor = 'linear-gradient(90deg,#00e676,#00d4ff)';
+  if(state.audioLevel > 70) levelColor = 'linear-gradient(90deg,#00e676,#ffaa00,#ff3b3b)';
+  else if(state.audioLevel > 40) levelColor = 'linear-gradient(90deg,#00e676,#00d4ff)';
+
+  let pulsesHtml = '';
+  if(state.detectedPulses.length > 0) {
+    pulsesHtml = `<div class="card" style="margin-bottom:14px">
+      <div class="card-title">النبضات المكتشفة حالياً</div>
+      <div class="pulse-live" id="pulseLive">
+        ${state.detectedPulses.map((_,i)=>`
+          <div class="pb" style="width:28px"></div>
+          ${i<state.detectedPulses.length-1?'<div class="pg"></div>':''}
+        `).join('')}
+        <span style="font-size:.72rem;color:var(--text2);margin-right:auto">${state.detectedPulses.length} نبضة</span>
+      </div>
+    </div>`;
+  }
+
+  const startStop = state.monitoring
+    ? `<div style="text-align:center;padding:10px 0">
+        <button onclick="toggleMonitor()" style="padding:12px 28px;border-radius:12px;background:rgba(255,59,59,.15);color:var(--danger);border:1px solid rgba(255,59,59,.35);font-family:var(--arabic);font-size:.9rem;font-weight:700;cursor:pointer">
+          ⏹ إيقاف المراقبة
+        </button>
+      </div>`
+    : `<div class="start-wrap">
+        <button class="btn-start" onclick="toggleMonitor()">🎤 بدء المراقبة الصوتية</button>
+        <div class="start-hint">يتطلب إذن الوصول للميكروفون</div>
+      </div>`;
+
+  document.getElementById('content').innerHTML = `
+    <div class="stats">
+      <div class="stat"><div class="stat-v" style="color:var(--accent)">${activeCount}</div><div class="stat-l">مركبة مفعّلة</div></div>
+      <div class="stat"><div class="stat-v" style="color:var(--success)">${state.logs.length}</div><div class="stat-l">إجمالي الرصدات</div></div>
+      <div class="stat"><div class="stat-v" style="color:${state.monitoring?'var(--success)':'var(--danger)'}">${state.monitoring?'ON':'OFF'}</div><div class="stat-l">المراقبة</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">مستوى الصوت الملتقط</div>
+      <div class="meter-row">
+        <span>استقبال صوتي</span>
+        <span class="mv" id="dbVal">${Math.round(state.audioLevel)}%</span>
+      </div>
+      <div class="track">
+        <div class="fill" id="meterFill" style="width:${state.audioLevel}%;background:${levelColor}"></div>
+        <div class="nmarker" id="nmarker" style="right:${noiseMarkerPos}%"></div>
+      </div>
+      <canvas id="waveCanvas"></canvas>
+      <div class="noise-ctrl">
+        <label>عتبة الضجيج:</label>
+        <input type="range" min="5" max="80" value="${state.noiseFloor}"
+          oninput="state.noiseFloor=+this.value;noiseThreshold=(state.noiseFloor/100)*130+30;document.getElementById('nmarker').style.right=state.noiseFloor+'%';document.getElementById('noiseVal').textContent=state.noiseFloor+'%'" style="flex:1" />
+        <span class="nv" id="noiseVal">${state.noiseFloor}%</span>
+      </div>
+    </div>
+
+    ${pulsesHtml}
+    ${startStop}
+  `;
+  initWaveCanvas();
+}
+
+// ── WAVE CANVAS ──
+function initWaveCanvas() {
+  const canvas = document.getElementById('waveCanvas');
+  if(!canvas) return;
+  // draw initial empty state
+  drawWave(0);
+}
+
+function drawWave(rms) {
+  const canvas = document.getElementById('waveCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width  = canvas.offsetWidth || 300;
+  const H = canvas.height = 72;
+
+  ctx.fillStyle = '#1a2440';
+  ctx.fillRect(0,0,W,H);
+
+  // grid
+  ctx.strokeStyle = 'rgba(30,45,80,.6)';
+  ctx.lineWidth = 1;
+  for(let i=0;i<=3;i++){
+    ctx.beginPath(); ctx.moveTo(0,H*i/3); ctx.lineTo(W,H*i/3); ctx.stroke();
+  }
+
+  // noise line
+  const nl = H - ((state.noiseFloor/100)*0.85+0.1)*H;
+  ctx.strokeStyle='rgba(255,170,0,.45)'; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,nl); ctx.lineTo(W,nl); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // wave
+  const data = waveHistory;
+  const step = W/data.length;
+  const grad = ctx.createLinearGradient(0,0,W,0);
+  grad.addColorStop(0,'rgba(0,212,255,.25)');
+  grad.addColorStop(.5,'rgba(0,212,255,.9)');
+  grad.addColorStop(1,'rgba(0,153,204,.25)');
+  ctx.strokeStyle=grad; ctx.lineWidth=2;
+  ctx.beginPath();
+  data.forEach((v,i)=>{
+    const x=i*step, y=H-Math.min((v/128)*H*.82,H-3);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.lineTo(W,H); ctx.lineTo(0,H);
+  ctx.fillStyle='rgba(0,212,255,.06)'; ctx.fill();
+}
+
+function updateMeter(level) {
+  const fill = document.getElementById('meterFill');
+  const val  = document.getElementById('dbVal');
+  if(!fill||!val) return;
+  let c='linear-gradient(90deg,#00e676,#00d4ff)';
+  if(level>70) c='linear-gradient(90deg,#00e676,#ffaa00,#ff3b3b)';
+  fill.style.width=level+'%'; fill.style.background=c;
+  val.textContent=Math.round(level)+'%';
+}
+
+function updatePulseLive() {
+  if(state.detectedPulses.length===0) return;
+  const el = document.getElementById('pulseLive');
+  if(!el) return;
+  el.innerHTML = state.detectedPulses.map((_,i)=>`
+    <div class="pb" style="width:28px"></div>
+    ${i<state.detectedPulses.length-1?'<div class="pg"></div>':''}
+  `).join('') + `<span style="font-size:.72rem;color:var(--text2);margin-right:auto">${state.detectedPulses.length} نبضة</span>`;
+}
+
+// ── FLEET ──
+function renderFleet() {
+  const formHtml = state.showForm ? buildAddForm() : '';
+  const vlist = state.vehicles.map(v => buildVehicleCard(v)).join('');
+  const emptyHtml = state.vehicles.length===0
+    ? '<div class="empty"><div class="em">🚒</div><div>لم تتم إضافة مركبات بعد</div></div>' : '';
+
+  document.getElementById('content').innerHTML = `
+    <div class="sec-hdr">
+      <div class="sec-ttl">قائمة المركبات</div>
+      <button class="btn-add" onclick="toggleForm()">＋ إضافة مركبة</button>
+    </div>
+    ${formHtml}
+    <div class="vlist">${vlist}${emptyHtml}</div>
+  `;
+}
+
+function buildVehicleCard(v) {
+  const pw = Math.max(10, v.pulseDuration * 38);
+  const gw = Math.max(4, (v.gapMs/500)*10);
+  const pviz = Array.from({length:v.pulses},(_,i)=>`
+    <div class="mp" style="width:${pw}px;background:${v.color};opacity:.85"></div>
+    ${i<v.pulses-1?`<div class="mg" style="width:${gw}px"></div>`:''}
+  `).join('');
+  const isRec = state.recordingFor === v.id;
+  return `
+  <div class="vcard" id="vc${v.id}">
+    <div class="vcard-stripe" style="background:${v.active?v.color:'var(--border2)'}"></div>
+    <div class="vtop">
+      <div class="vicon" style="border-color:${v.active?v.color+'44':'var(--border)'};background:${v.active?v.color+'11':'var(--surface3)'}">
+        ${v.icon}
+      </div>
+      <div class="vinfo">
+        <div class="vname" style="color:${v.active?v.color:'var(--text)'}">${v.name}</div>
+        <div class="vpat">${v.pulses} نبضة · ${v.pulseDuration}ث · فراغ ${v.gapMs}ms</div>
+      </div>
+      <div class="vact">
+        <div class="ibtn" onclick="deleteVehicle(${v.id})" title="حذف">🗑</div>
+      </div>
+    </div>
+    <div class="pviz">${pviz}<span style="font-size:.68rem;color:var(--text2);margin-right:auto">نمط الرنين</span></div>
+    <div class="vvol">
+      <label>الصوت</label>
+      <input type="range" min="0" max="100" value="${v.volume}"
+        oninput="updateVolume(${v.id},+this.value);this.nextElementSibling.textContent=this.value+'%'" style="flex:1" />
+      <span class="vv" style="color:${v.color}">${v.volume}%</span>
+    </div>
+    <div class="vbot">
+      ${isRec
+        ? `<div class="rec-ind"><div class="rdot"></div>جاري التسجيل…</div>`
+        : `<button class="btn-rec" onclick="startLearn(${v.id})">⏺ تسجيل وتعلم</button>`
+      }
+      <div class="toggle-row">
+        <span class="toggle-lbl">${v.active?'مفعّل':'معطّل'}</span>
+        <div class="toggle ${v.active?'on':''}" onclick="toggleVehicle(${v.id})">
+          <div class="tthumb"></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildAddForm() {
+  const iconOpts  = VEHICLE_ICONS.map(ic=>`<div class="ipopt${ic==='🔔'?' sel':''}" onclick="selectIcon(this,'${ic}')">${ic}</div>`).join('');
+  const colorOpts = COLORS.map(c=>`<div class="cdot${c==='#ef4444'?' sel':''}" style="background:${c}" onclick="selectColor(this,'${c}')"></div>`).join('');
+  return `
+  <div class="form-card" id="addForm">
+    <div class="form-title">إضافة مركبة جديدة</div>
+    <div class="fg"><label class="fl">اسم المركبة</label>
+      <input class="fi" id="fn" placeholder="مثال: إسعاف 02" /></div>
+    <div class="fg"><label class="fl">الأيقونة</label>
+      <div class="icon-pick" id="iconPick">${iconOpts}</div></div>
+    <div class="fg"><label class="fl">اللون</label>
+      <div class="cdots" id="colorPick">${colorOpts}</div></div>
+    <div class="fgrid">
+      <div class="fg"><label class="fl">عدد النبضات</label>
+        <input class="fi" id="fp" type="number" min="1" max="8" value="2" /></div>
+      <div class="fg"><label class="fl">مدة النبضة</label>
+        <select class="fi" id="fd">
+          <option value="0.2">قصيرة 0.2ث</option>
+          <option value="0.4" selected>متوسطة 0.4ث</option>
+          <option value="0.8">طويلة 0.8ث</option>
+          <option value="1.2">طويلة جداً 1.2ث</option>
+        </select></div>
+      <div class="fg"><label class="fl">الفراغ (ms)</label>
+        <input class="fi" id="fg2" type="number" min="100" max="2000" step="50" value="400" /></div>
+      <div class="fg"><label class="fl">مستوى الصوت</label>
+        <input class="fi" id="fv" type="number" min="0" max="100" value="80" /></div>
+    </div>
+    <div class="divider"></div>
+    <div class="form-btns">
+      <button class="btn btn-ghost" onclick="toggleForm()">✕ إلغاء</button>
+      <button class="btn btn-primary" onclick="saveNewVehicle()">✔ حفظ</button>
+    </div>
+  </div>`;
+}
+
+let _selectedIcon  = '🔔';
+let _selectedColor = '#ef4444';
+
+function selectIcon(el, ic) {
+  _selectedIcon = ic;
+  document.querySelectorAll('.ipopt').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function selectColor(el, c) {
+  _selectedColor = c;
+  document.querySelectorAll('.cdot').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function saveNewVehicle() {
+  const name = document.getElementById('fn').value.trim();
+  if(!name) { alert('أدخل اسم المركبة'); return; }
+  const newV = {
+    id: Date.now(),
+    name, icon: _selectedIcon, color: _selectedColor,
+    pulses: +document.getElementById('fp').value,
+    pulseDuration: +document.getElementById('fd').value,
+    gapMs: +document.getElementById('fg2').value,
+    volume: +document.getElementById('fv').value,
+    active: true,
+  };
+  state.vehicles.push(newV);
+  state.showForm = false;
+  _selectedIcon='🔔'; _selectedColor='#ef4444';
+  saveVehicles();
+  renderFleet();
+}
+
+function toggleForm()         { state.showForm=!state.showForm; renderFleet(); }
+function toggleVehicle(id)    { state.vehicles=state.vehicles.map(v=>v.id===id?{...v,active:!v.active}:v); saveVehicles(); renderFleet(); }
+function deleteVehicle(id)    { if(confirm('حذف المركبة؟')) { state.vehicles=state.vehicles.filter(v=>v.id!==id); saveVehicles(); renderFleet(); } }
+function updateVolume(id,vol) { state.vehicles=state.vehicles.map(v=>v.id===id?{...v,volume:vol}:v); saveVehicles(); }
+
+// ── RECORD & LEARN ──
+function startLearn(id) {
+  if(!state.monitoring) { alert('يجب تشغيل المراقبة أولاً'); return; }
+  state.recordingFor = id;
+  renderFleet();
+  const learnPulses = [];
+  let lAbove=false, lTime=0;
+  const startTs = Date.now();
+
+  const loop = () => {
+    if(!analyser) return;
+    const d = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(d);
+    const rms = Math.sqrt(d.reduce((s,v)=>s+v*v,0)/d.length);
+    const above = rms > noiseThreshold;
+    const now = Date.now();
+    if(above && !lAbove && now-lTime>150) { learnPulses.push(now); lTime=now; }
+    lAbove=above;
+    if(Date.now()-startTs < 5000) requestAnimationFrame(loop);
+    else finishLearn(id, learnPulses);
+  };
+  requestAnimationFrame(loop);
+
+  state.recordingTimeout = setTimeout(()=>finishLearn(id,learnPulses), 5500);
+}
+
+function finishLearn(id, pulses) {
+  clearTimeout(state.recordingTimeout);
+  state.recordingFor = null;
+  if(pulses.length > 0) {
+    const gaps = pulses.slice(1).map((p,i)=>p-pulses[i]);
+    const avgGap = gaps.length ? Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length) : 400;
+    state.vehicles = state.vehicles.map(v=>v.id===id?{...v,pulses:pulses.length,gapMs:avgGap}:v);
+    saveVehicles();
+    alert(`✅ تم التعلم!\nعدد النبضات: ${pulses.length}\nمتوسط الفراغ: ${avgGap}ms`);
+  } else {
+    alert('لم يتم رصد أي نبضات. حاول مرة أخرى.');
+  }
+  renderFleet();
+}
+
+// ── LOG ──
+function renderLog() {
+  const entries = state.logs.map(l=>`
+    <div class="log-entry">
+      <span class="licon">${l.icon}</span>
+      <div class="ltext">
+        <div><span class="lveh">${l.vehicleName}</span> — تم رصد رنين</div>
+        <div class="ltime">${l.time}</div>
+        <div class="conf-bar"><div class="conf-fill" style="width:${l.confidence}%"></div></div>
+      </div>
+      <span class="lbadge">${l.confidence}%</span>
+    </div>
+  `).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="sec-hdr">
+      <div class="sec-ttl">سجل الأحداث</div>
+      <button class="btn btn-ghost" onclick="clearLog()">🗑 مسح</button>
+    </div>
+    ${state.logs.length===0
+      ? '<div class="empty"><div class="em">📋</div><div>لا توجد أحداث مسجّلة بعد</div></div>'
+      : entries
+    }
+  `;
+}
+
+function clearLog() {
+  if(confirm('مسح سجل الأحداث؟')) {
+    state.logs=[]; saveLogs(); renderLog();
+  }
+}
+
+/* =====================================================================
+   CONTROLS
+===================================================================== */
+function toggleMonitor() {
+  if(state.monitoring) stopMonitor();
+  else startMonitor();
+}
+
+function updateStatusBadge() {
+  const b = document.getElementById('statusBadge');
+  const t = document.getElementById('statusTxt');
+  if(state.monitoring) { b.className='sbadge on'; t.textContent='مراقبة نشطة'; }
+  else                  { b.className='sbadge off'; t.textContent='متوقف'; }
+  if(state.tab==='dashboard') renderDashboard();
+}
+
+/* =====================================================================
+   PWA / SERVICE WORKER
+===================================================================== */
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').classList.add('show');
+});
+
+function installPWA() {
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(()=>{
+    deferredPrompt=null;
+    document.getElementById('installBanner').classList.remove('show');
+  });
+}
+
+window.addEventListener('appinstalled', ()=>{
+  document.getElementById('installBanner').classList.remove('show');
+});
+
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg=>console.log('SW registered'))
+      .catch(err=>console.log('SW error',err));
+  });
+}
+
+/* =====================================================================
+   AUTO-START & INIT
+===================================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+  render();
+  // Auto-start if launched via shortcut
+  if(new URLSearchParams(location.search).get('autostart')==='1') {
+    setTimeout(startMonitor, 500);
+  }
+});
+</script>
+</body>
+</html>
